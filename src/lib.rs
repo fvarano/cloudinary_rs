@@ -39,11 +39,40 @@ impl Cloudinary {
         options: &UploadOptions<'_>,
     ) -> Result<UploadResult> {
         let client = Client::new();
-        let file = prepare_file(&src).await?;
+        let file = prepare_file(&src, "image/*").await?;
         let multipart = self.build_form_data(options).part("file", file);
         let response = client
             .post(format!(
                 "https://api.cloudinary.com/v1_1/{}/image/upload",
+                self.cloud_name
+            ))
+            .multipart(multipart)
+            .send()
+            .await?;
+        let text = response.text().await?;
+        let json = serde_json::from_str(&text).context(format!("failed to parse:\n\n {}", text))?;
+        Ok(json)
+    }
+
+    /// uploads a video
+    /// ```rust
+    /// use cloudinary::{Cloudinary, upload::UploadOptions};
+    /// let options = UploadOptions::new().set_public_id("file.jpg".to_string());
+    /// let cloudinary = Cloudinary::new("api_key".to_string(), "cloud_name".to_string(), "api_secret".to_string() );
+    /// let result = cloudinary.upload_video("./video.mp4".to_string(), &options);
+    /// ```
+    pub async fn upload_video(
+        &self,
+        src: String,
+        options: &UploadOptions<'_>,
+    ) -> Result<UploadResult> {
+        let client = Client::new();
+        let file = prepare_file(&src, "video/*").await?;
+        let multipart = self.build_form_data(options).part("file", file);
+
+        let response = client
+            .post(format!(
+                "https://api.cloudinary.com/v1_1/{}/video/upload",
                 self.cloud_name
             ))
             .multipart(multipart)
@@ -84,7 +113,7 @@ impl Cloudinary {
     }
 }
 
-async fn prepare_file(src: &str) -> Result<Part> {
+async fn prepare_file(src: &str, mime_str: &str) -> Result<Part> {
     let file = File::open(&src).await?;
 
     let filename = Path::new(src)
@@ -97,5 +126,5 @@ async fn prepare_file(src: &str) -> Result<Part> {
     let file_body = Body::wrap_stream(stream);
     Ok(Part::stream(file_body)
         .file_name(filename)
-        .mime_str("image/*")?)
+        .mime_str(mime_str)?)
 }

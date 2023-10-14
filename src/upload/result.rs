@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{de, Deserialize, Deserializer};
 use std::{fmt::Display, str::FromStr};
+use std::fmt::Formatter;
 
 fn deserialize_from_str<'de, S, D>(deserializer: D) -> Result<S, D::Error>
 where
@@ -54,4 +55,10 @@ pub struct Response {
     pub original_filename: Option<String>,
     pub original_extension: Option<String>,
     pub api_key: String,
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.message)
+    }
 }
